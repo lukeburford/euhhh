@@ -8,63 +8,45 @@
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   canvas { display: block; width: 100vw; height: 100vh; }
 
-  #start {
-    position: fixed; inset: 0; border: 0; width: 100%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem;
-    background: rgba(0,0,0,.85); color: #fff; cursor: pointer;
-    font: clamp(1.75rem, 6vw, 3.5rem)/1 Impact, "Arial Black", sans-serif;
-  }
-  #start small { font: 1rem/1.4 system-ui, sans-serif; opacity: .7; }
-  #start:focus-visible { outline: 4px solid #fff; outline-offset: -8px; }
-
   #caption {
-    position: fixed; left: 0; right: 0; top: 50%;
-    text-align: center; pointer-events: none; color: #fff;
+    position: fixed; left: 50%; top: 50%;
+    background: none; border: 0; padding: 0; cursor: pointer; color: #fff;
     font: clamp(2.5rem, 10vw, 7rem)/1 Impact, "Arial Black", sans-serif;
     -webkit-text-stroke: 3px #000; paint-order: stroke fill;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
     animation: zoom 1.2s ease-in-out infinite alternate;
   }
+  #caption:focus-visible { outline: 4px solid #fff; outline-offset: 8px; }
   @keyframes zoom {
-    from { transform: translateY(-50%) scale(.85); }
-    to   { transform: translateY(-50%) scale(1.15); }
+    from { transform: translate(-50%, -50%) scale(.85); }
+    to   { transform: translate(-50%, -50%) scale(1.15); }
   }
   @media (prefers-reduced-motion: reduce) { #caption { animation: none; } }
-  #picker { display: none; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="caption" hidden></div>
-<button id="start">Click to start<small>Sound on</small></button>
-<input id="picker" type="file" accept="video/*">
+<button id="caption" aria-label="Turn sound on">euhhh</button>
 
 <script>
 // ---- Settings -------------------------------------------------------------
 const CONFIG = {
-  src: 'euhhh.mp4', 
-  tilesAcross: 4,   
-  caption: 'euhhh'     
+  src: 'euhhh.mp4',
+  tilesAcross: 4
 };
 // --------------------------------------------------------------------------
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const startBtn = document.getElementById('start');
-const picker = document.getElementById('picker');
 const caption = document.getElementById('caption');
 
 const video = document.createElement('video');
-video.loop = true;
-video.playsInline = true;
-video.preload = 'auto';
 video.src = CONFIG.src;
-
-let fileMissing = false;
-video.addEventListener('error', () => {
-  fileMissing = true;
-  startBtn.innerHTML = 'Choose your video<small>' + CONFIG.src + ' wasn’t found next to this page</small>';
-});
+video.loop = true;
+video.muted = true;        // muted autoplay is allowed, so the tiles start straight away
+video.playsInline = true;
+video.autoplay = true;
+video.play().catch(() => {});
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -74,7 +56,7 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-function draw() {
+(function draw() {
   if (video.videoWidth) {
     const tileW = canvas.width / CONFIG.tilesAcross;
     const tileH = tileW * (video.videoHeight / video.videoWidth);
@@ -85,28 +67,18 @@ function draw() {
     }
   }
   requestAnimationFrame(draw);
+})();
+
+// Clicking euhhh (or anywhere) turns the sound on and restarts from the top
+function soundOn() {
+  if (!video.muted) return;
+  video.muted = false;
+  video.currentTime = 0;
+  video.play();
+  caption.setAttribute('aria-label', 'Sound on');
 }
-
-async function start() {
-  try {
-    await video.play();
-    startBtn.hidden = true;
-    if (CONFIG.caption) { caption.textContent = CONFIG.caption; caption.hidden = false; }
-    draw();
-  } catch (e) {
-    startBtn.innerHTML = 'Click to play<small>The browser needs one more click</small>';
-  }
-}
-
-startBtn.addEventListener('click', () => fileMissing ? picker.click() : start());
-
-picker.addEventListener('change', () => {
-  const file = picker.files[0];
-  if (!file) return;
-  fileMissing = false;
-  video.src = URL.createObjectURL(file);
-  startBtn.innerHTML = 'Click to start<small>Sound on</small>';
-});
+document.addEventListener('click', soundOn);
+document.addEventListener('keydown', soundOn);
 </script>
 </body>
 </html>
