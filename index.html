@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YTMND</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+
+  #start {
+    position: fixed; inset: 0; border: 0; width: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem;
+    background: rgba(0,0,0,.85); color: #fff; cursor: pointer;
+    font: clamp(1.75rem, 6vw, 3.5rem)/1 Impact, "Arial Black", sans-serif;
+  }
+  #start small { font: 1rem/1.4 system-ui, sans-serif; opacity: .7; }
+  #start:focus-visible { outline: 4px solid #fff; outline-offset: -8px; }
+
+  #caption {
+    position: fixed; left: 0; right: 0; top: 50%;
+    text-align: center; pointer-events: none; color: #fff;
+    font: clamp(2.5rem, 10vw, 7rem)/1 Impact, "Arial Black", sans-serif;
+    -webkit-text-stroke: 3px #000; paint-order: stroke fill;
+    transform: translateY(-50%);
+    animation: zoom 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes zoom {
+    from { transform: translateY(-50%) scale(.85); }
+    to   { transform: translateY(-50%) scale(1.15); }
+  }
+  @media (prefers-reduced-motion: reduce) { #caption { animation: none; } }
+  #picker { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="caption" hidden></div>
+<button id="start">Click to start<small>Sound on</small></button>
+<input id="picker" type="file" accept="video/*">
+
+<script>
+// ---- Settings -------------------------------------------------------------
+const CONFIG = {
+  src: 'video.mp4',   // put your mp4 next to this file with this name
+  tilesAcross: 4,     // how many copies across the screen
+  caption: ''         // optional zooming YTMND text, e.g. 'YOU'RE THE MAN NOW DOG'
+};
+// --------------------------------------------------------------------------
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('start');
+const picker = document.getElementById('picker');
+const caption = document.getElementById('caption');
+
+const video = document.createElement('video');
+video.loop = true;
+video.playsInline = true;
+video.preload = 'auto';
+video.src = CONFIG.src;
+
+let fileMissing = false;
+video.addEventListener('error', () => {
+  fileMissing = true;
+  startBtn.innerHTML = 'Choose your video<small>' + CONFIG.src + ' wasn’t found next to this page</small>';
+});
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(innerWidth * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+}
+addEventListener('resize', resize);
+resize();
+
+function draw() {
+  if (video.videoWidth) {
+    const tileW = canvas.width / CONFIG.tilesAcross;
+    const tileH = tileW * (video.videoHeight / video.videoWidth);
+    for (let y = 0; y < canvas.height; y += tileH) {
+      for (let x = 0; x < canvas.width; x += tileW) {
+        ctx.drawImage(video, x, y, tileW, tileH);
+      }
+    }
+  }
+  requestAnimationFrame(draw);
+}
+
+async function start() {
+  try {
+    await video.play();
+    startBtn.hidden = true;
+    if (CONFIG.caption) { caption.textContent = CONFIG.caption; caption.hidden = false; }
+    draw();
+  } catch (e) {
+    startBtn.innerHTML = 'Click to play<small>The browser needs one more click</small>';
+  }
+}
+
+startBtn.addEventListener('click', () => fileMissing ? picker.click() : start());
+
+picker.addEventListener('change', () => {
+  const file = picker.files[0];
+  if (!file) return;
+  fileMissing = false;
+  video.src = URL.createObjectURL(file);
+  startBtn.innerHTML = 'Click to start<small>Sound on</small>';
+});
+</script>
+</body>
+</html>
